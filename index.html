@@ -501,10 +501,12 @@ async function verificarNoticia() {
 async function sairDaConta(event) {
     event.preventDefault();
 
-    const { error } = await clienteSupabase.auth.signOut();
+    const { error } =
+        await clienteSupabase.auth.signOut();
 
     if (error) {
-        alert("Não foi possível sair da conta. Tente novamente.");
+        console.error("Erro ao sair:", error);
+        alert("Não foi possível sair da conta.");
         return;
     }
 
@@ -598,23 +600,35 @@ async function limparHistoricoPesquisas() {
     await carregarHistorico();
 }
 
+
 async function atualizarMenu() {
-    const { data, error } = await clienteSupabase.auth.getSession();
+    const { data, error } =
+        await clienteSupabase.auth.getSession();
 
-    const logado = !error && !!data.session;
+    const logado = !error && !!data?.session;
 
-    const links = document.querySelectorAll("#menu a");
+    const linkEntrar = document.querySelector(
+        '#menu a[href="login.html"]'
+    );
 
-    links.forEach(link => {
-        if (link.textContent.trim() === "Entrar" ||
-            link.textContent.trim() === "Criar conta") {
-            link.style.display = logado ? "none" : "block";
-        }
+    const linkCadastro = document.querySelector(
+        '#menu a[href="cadastro.html"]'
+    );
 
-        if (link.textContent.trim() === "Sair da conta") {
-            link.style.display = logado ? "block" : "none";
-        }
-    });
+    const linkSair = [...document.querySelectorAll("#menu a")]
+        .find(link => link.textContent.trim() === "Sair da conta");
+
+    if (linkEntrar) {
+        linkEntrar.style.display = logado ? "none" : "block";
+    }
+
+    if (linkCadastro) {
+        linkCadastro.style.display = logado ? "none" : "block";
+    }
+
+    if (linkSair) {
+    linkSair.style.display = "block";
+}
 
     if (logado) {
         await carregarHistorico();
