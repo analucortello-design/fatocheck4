@@ -244,11 +244,12 @@ padding:20px;
 
 <div class="menu" id="menu">
 <a href="index.html">Início</a>
-<a href="quiz.html">Quiz</a>
+<a href="quiz.html" onclick="return acessarQuiz(event)">Quiz</a>
 <a href="cadastro.html">Criar conta</a>
 <a href="login.html">Entrar</a>
 <a href="sobre.html">Sobre nós</a>
 <a href="graficos.html">Resultados</a>
+<a href="#" onclick="sairDaConta(event)">Sair da conta</a>
 </div>
 
 <header>
@@ -306,6 +307,20 @@ onkeypress="if(event.key === 'Enter'){ verificarNoticia(); }"
 </section>
 
 <section class="noticias">
+
+<section id="secaoHistorico" style="display:none;">
+    <h2>🕘 Histórico de pesquisas</h2>
+    <p>As notícias que você pesquisou nesta conta aparecem aqui.</p>
+    <div id="listaHistorico"></div>
+    <button
+        id="limparHistorico"
+        type="button"
+        onclick="limparHistoricoPesquisas()"
+        style="display:none; background:#7c3aed; color:white;
+        border:0; padding:10px 20px; border-radius:8px; cursor:pointer;">
+        Limpar histórico
+    </button>
+</section>
 
 <h2>📰 Assuntos que geram mais dúvidas</h2>
 
@@ -386,6 +401,32 @@ LEIA MAIS
 Projeto TCC - Técnico em Informática
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+const SUPABASE_URL = "https://joajolboddinnajxrnop.supabase.co";
+const SUPABASE_KEY = "sb_publishable_EEaShgemq6o_yjfZSnwCJA_9gV1OJyc";
+
+const clienteSupabase = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+
+async function acessarQuiz(event) {
+    event.preventDefault();
+
+    const { data, error } =
+        await clienteSupabase.auth.getSession();
+
+    if (error || !data.session) {
+        window.location.href = "login.html?origem=quiz";
+        return;
+    }
+
+    window.location.href = "quiz.html";
+}
+</script>
+
 <script>
 
 function abrir(){
@@ -403,38 +444,186 @@ botao.innerHTML = "☰";
 menu.style.left = "0px";
 botao.innerHTML = "✖";
 
-}
-
-}
-
-function verificarNoticia(){
-
-let texto = document.getElementById("busca").value.toLowerCase();
-let resultado = document.getElementById("resultadoIA");
-
-if(texto.trim() == ""){
-alert("Digite ou cole uma notícia.");
-return;
-}
-
-let resposta = "";
-let problemas = 0;
-
-
-const sites =
-"site:lupa.uol.com.br OR site:aosfatos.org OR site:boatos.org";
-
-const query = texto + " " + sites;
-
-const url =
-"https://www.google.com/search?q=" +
-encodeURIComponent(query);
-
-window.open(url, "_blank");
-
 
 
 }
+
+}
+
+async function verificarNoticia() {
+    const campo = document.getElementById("busca");
+    const resultado = document.getElementById("resultadoIA");
+    const texto = campo.value.trim();
+
+    if (!texto) {
+        alert("Digite ou cole uma notícia.");
+        return;
+    }
+
+    resultado.textContent = "Pesquisando...";
+
+    const { data: sessaoData } =
+        await clienteSupabase.auth.getSession();
+
+    if (sessaoData.session) {
+        const { error } = await clienteSupabase
+            .from("historico_pesquisas")
+            .insert({
+                user_id: sessaoData.session.user.id,
+                pesquisa: texto
+            });
+
+        if (error) {
+            console.error("Erro ao salvar pesquisa:", error);
+        } else {
+            await carregarHistorico();
+        }
+    }
+
+    const sites =
+        "site:lupa.uol.com.br OR site:aosfatos.org OR site:boatos.org";
+
+    const query = texto + " " + sites;
+    const url =
+        "https://www.google.com/search?q=" +
+        encodeURIComponent(query);
+
+    resultado.textContent =
+        "Abrindo o Google para procurar verificações dessa notícia.";
+
+    window.open(url, "_blank");
+}
+
+
+</script>
+
+<script>
+async function sairDaConta(event) {
+    event.preventDefault();
+
+    const { error } = await clienteSupabase.auth.signOut();
+
+    if (error) {
+        alert("Não foi possível sair da conta. Tente novamente.");
+        return;
+    }
+
+    window.location.href = "login.html";
+}
+</script>
+
+<script>
+async function carregarHistorico() {
+    const { data: sessaoData, error: erroSessao } =
+        await clienteSupabase.auth.getSession();
+
+    const secao = document.getElementById("secaoHistorico");
+    const lista = document.getElementById("listaHistorico");
+    const botaoLimpar = document.getElementById("limparHistorico");
+
+    if (erroSessao || !sessaoData.session) {
+        secao.style.display = "none";
+        return;
+    }
+
+    secao.style.display = "block";
+    lista.textContent = "Carregando histórico...";
+
+    const { data, error } = await clienteSupabase
+        .from("historico_pesquisas")
+        .select("id, pesquisa, criado_em")
+        .order("criado_em", { ascending: false })
+        .limit(20);
+
+    if (error) {
+        console.error("Erro ao carregar histórico:", error);
+        lista.textContent = "Não foi possível carregar o histórico.";
+        botaoLimpar.style.display = "none";
+        return;
+    }
+
+    lista.replaceChildren();
+
+    if (!data.length) {
+        lista.textContent = "Você ainda não fez pesquisas nesta conta.";
+        botaoLimpar.style.display = "none";
+        return;
+    }
+
+    for (const item of data) {
+        const registro = document.createElement("div");
+        registro.style.cssText =
+            "background:#ede9fe; padding:12px; margin:10px 0; border-radius:8px;";
+
+        const texto = document.createElement("p");
+        texto.textContent = item.pesquisa;
+
+        const dataPesquisa = document.createElement("small");
+        dataPesquisa.textContent =
+            new Date(item.criado_em).toLocaleString("pt-BR");
+
+        registro.append(texto, dataPesquisa);
+        lista.appendChild(registro);
+    }
+
+    botaoLimpar.style.display = "inline-block";
+}
+
+async function limparHistoricoPesquisas() {
+    if (!confirm("Deseja apagar todo o seu histórico de pesquisas?")) {
+        return;
+    }
+
+    const { data: sessaoData, error: erroSessao } =
+        await clienteSupabase.auth.getSession();
+
+    if (erroSessao || !sessaoData.session) {
+        alert("Entre na sua conta para gerenciar o histórico.");
+        return;
+    }
+
+    const userId = sessaoData.session.user.id;
+
+    const { error } = await clienteSupabase
+        .from("historico_pesquisas")
+        .delete()
+        .eq("user_id", userId);
+
+    if (error) {
+        alert("Não foi possível apagar o histórico.");
+        console.error(error);
+        return;
+    }
+
+    await carregarHistorico();
+}
+
+async function atualizarMenu() {
+    const { data, error } = await clienteSupabase.auth.getSession();
+
+    const logado = !error && !!data.session;
+
+    const links = document.querySelectorAll("#menu a");
+
+    links.forEach(link => {
+        if (link.textContent.trim() === "Entrar" ||
+            link.textContent.trim() === "Criar conta") {
+            link.style.display = logado ? "none" : "block";
+        }
+
+        if (link.textContent.trim() === "Sair da conta") {
+            link.style.display = logado ? "block" : "none";
+        }
+    });
+
+    if (logado) {
+        await carregarHistorico();
+    } else {
+        document.getElementById("secaoHistorico").style.display = "none";
+    }
+}
+
+document.addEventListener("DOMContentLoaded", atualizarMenu);
 
 </script>
 

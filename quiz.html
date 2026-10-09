@@ -39,6 +39,7 @@ body{
     border-radius:20px;
     box-shadow:0 8px 20px rgba(0,0,0,0.1);
     animation:surgir 0.8s ease;
+    display: none;
 }
 
 @keyframes surgir{
@@ -644,20 +645,30 @@ window.supabase.createClient(
 );
 
 
-// Verifica se a pessoa está logada
 
-async function verificarLogin(){
+async function verificarLogin() {
+    const container = document.querySelector(".quiz-container");
+    container.style.display = "none";
 
-    const { data: { session } } =
-    await clienteSupabase.auth.getSession();
+    try {
+        const { data, error } =
+            await clienteSupabase.auth.getSession();
 
-    if(!session){
+        if (error) throw error;
 
-        window.location.href =
-        "login.html?origem=quiz";
+        if (!data.session) {
+            window.location.replace("login.html?origem=quiz");
+            return;
+        }
 
+        container.style.display = "block";
+
+    } catch (erro) {
+        console.error("Erro ao verificar login:", erro);
+
+        document.getElementById("resultado").textContent =
+            "Não foi possível verificar seu login. Tente novamente.";
     }
-
 }
 
 verificarLogin();

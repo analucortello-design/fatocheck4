@@ -253,7 +253,7 @@ formulario.addEventListener("submit", async function(event){
 
 
         mensagem.textContent =
-        "✅ Cadastro realizado! Verifique seu e-mail para confirmar a conta.";
+        "✅ Cadastro realizado!";
 
         mensagem.style.color = "green";
 
@@ -262,6 +262,21 @@ formulario.addEventListener("submit", async function(event){
             "Usuário cadastrado:",
             data
         );
+
+        mensagem.style.color = "green";
+
+        setTimeout(function() {
+
+            const parametros = new URLSearchParams(window.location.search);
+            const origem = parametros.get("origem");
+
+            if (origem === "quiz") {
+            window.location.href = "quiz.html";
+            } else {
+            window.location.href = "index.html";
+            }
+
+        }, 1000);
 
 
     }catch(erro){

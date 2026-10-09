@@ -121,6 +121,12 @@ Entrar
 
 </form>
 
+<p>
+    <a href="#" onclick="esqueciSenha(event)">
+        Esqueci minha senha
+    </a>
+</p>
+
 <div id="mensagem"></div>
 
 <p>
@@ -214,6 +220,48 @@ formulario.addEventListener("submit", async function(event) {
     }
 
 });
+
+async function esqueciSenha(event) {
+    event.preventDefault();
+
+    const email = document.getElementById("email").value.trim();
+    const mensagem = document.getElementById("mensagem");
+
+    if (!email) {
+        mensagem.textContent =
+            "Digite seu e-mail no campo acima para receber o link.";
+        mensagem.style.color = "red";
+        document.getElementById("email").focus();
+        return;
+    }
+
+    mensagem.textContent = "Enviando e-mail...";
+    mensagem.style.color = "#7c3aed";
+
+    const caminho = window.location.pathname.replace(
+        /[^/]*$/,
+        "redefinir-senha.html"
+    );
+
+    const redirectTo = window.location.origin + caminho;
+
+    const { error } = await clienteSupabase.auth.resetPasswordForEmail(
+        email,
+        { redirectTo: redirectTo }
+    );
+
+    if (error) {
+        mensagem.textContent =
+            "Não foi possível enviar o e-mail. Tente novamente.";
+        mensagem.style.color = "red";
+        console.error(error);
+        return;
+    }
+
+    mensagem.textContent =
+        "Se esse e-mail estiver cadastrado, você receberá as instruções para redefinir a senha.";
+    mensagem.style.color = "green";
+}
 
 </script>
 
